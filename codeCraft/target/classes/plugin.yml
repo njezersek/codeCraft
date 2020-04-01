@@ -1,0 +1,12 @@
+main: org.eu.jezersek.App
+name: codeCraft
+version: 0.1
+api-version: 1.15
+authors: [jezersek]
+website: jezersek.eu.org
+depend: [NBTAPI]
+
+commands:
+    cc:
+       description: Test command
+       usage: /<command>
