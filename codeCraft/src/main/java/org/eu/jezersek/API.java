@@ -6,6 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Zombie;
 import org.bukkit.inventory.ItemStack;
@@ -47,49 +48,85 @@ public class API{
         }
     }
 
-    public void move(int x, int y){
+    private void move(double x, double y){
         Location destination = robot.getBody().getLocation();
-        destination = destination.add(x, 0, y);
+        destination.add(x, 0, y);
+        // align destination with block
+        destination.setX(Math.floor(destination.getX()) + 0.5);
+        destination.setZ(Math.floor(destination.getZ()) + 0.5);
+        
+        if(!destination.getBlock().isPassable()){ // block in robots path
+            if(destination.getBlock().getRelative(BlockFace.UP).isPassable()){ // robot can jump on that block
+                scheduler.scheduleSyncDelayedTask(plugin, () -> { 
+                    Vector direction = new Vector(0,0.5,0);
+                    robot.getBody().setVelocity(robot.getBody().getVelocity().add(direction));
+                }, 0L);
+            }
+            else{ // if block in fornt of robot and one above it is unpassable 
+                warn("I can't go through blocks");
+                return;
+            }
+        }
+
+        destination.setY(0);
         robot.setLastLocation(robot.getBody().getLocation());
+        double d = robot.getLastLocation().distance(destination);
+        //print("Destination: " + blockPosition(destination) + " lastLocation: " + blockPosition(robot.getLastLocation()) + "d: " + d);
         int timeOut = 0;
-        Vector direction = destination.subtract(robot.getBody().getLocation()).toVector().normalize().multiply(0.1);
-        while(robot.getLastLocation().distanceSquared(destination) > 0.1*0.1){
-            //robot.getBody().teleport(robot.getBody().getLocation().setDirection(direction));
+        
+        while(d > 0.1){
+            Location last = robot.getLastLocation().clone();
+            last.setY(0);
+
+            Vector direction = destination.clone().subtract(last).toVector().normalize().multiply(0.01);
+            d = last.distance(destination);
+            //print(timeOut + " : " + d + " - (" + direction.getX() + ", " + direction.getY() + ", " + direction.getZ() + ")" );
             scheduler.scheduleSyncDelayedTask(plugin, () -> {
-                robot.getBody().setVelocity(direction);
+                robot.getBody().setVelocity(robot.getBody().getVelocity().add(direction));
             }, 0L);
             if(timeOut++ > 100)break;
-            sleep(200);
+            sleep(20);
             scheduler.scheduleSyncDelayedTask(plugin, () -> {
                 robot.setLastLocation(body.getLocation());  
             }, 0L);
-            print(timeOut + " : " + robot.getLastLocation().distanceSquared(destination));
         }
-        robot.getBody().setVelocity(new Vector(0,0,0));
+        center();
+        
+        //robot.getBody().setVelocity(new Vector(0,0,0));
     }
 
-    /*public void move(int x, int y){
-        Location destination = robot.getBody().getLocation();
-        destination = destination.add(x, 0, y);
-        robot.setLastLocation(robot.getBody().getLocation());
-        int timeOut = 0;
-        Vector direction = destination.subtract(robot.getBody().getLocation()).toVector().normalize().multiply(0.1);
-        while(robot.getLastLocation().distanceSquared(destination) > 0.1*0.1){
-            //robot.getBody().teleport(robot.getBody().getLocation().setDirection(direction));
-            scheduler.scheduleSyncDelayedTask(plugin, () -> {
-                robot.getBody().setVelocity(direction);
-            }, 0L);
-            if(timeOut++ > 100)break;
-            sleep(200);
-            scheduler.scheduleSyncDelayedTask(plugin, () -> {
-                robot.setLastLocation(body.getLocation());  
-            }, 0L);
-            print(timeOut + " : " + robot.getLastLocation().distanceSquared(destination));
-        }
-        robot.getBody().setVelocity(new Vector(0,0,0));
-    }*/
+    private void center(){
+        scheduler.scheduleSyncDelayedTask(plugin, () -> {
+            Location center = body.getLocation();
+            center.setX(Math.floor(center.getX())+0.5);
+            center.setZ(Math.floor(center.getZ())+0.5);
+            body.teleport(center);
+        },0L);
+    }
 
-    public void tp(int x, int y, int z){
+    public void forward(){
+        updateDirection();
+        Vector v = relativeVector(new Vector(1,0,0));
+        print(v.getX() + ", " + v.getY());
+        move(v.getX(), v.getZ());
+    }
+
+    public void jump(){
+        updateDirection();
+        scheduler.scheduleSyncDelayedTask(plugin, () -> {
+            if(body.isOnGround()){
+                Vector direction = new Vector(0,0.5,0);
+                robot.getBody().setVelocity(robot.getBody().getVelocity().add(direction));
+            }
+            else{
+                warn("Can't jump if not on ground!");
+            }
+        }, 0L);
+        sleep(50);
+    }
+
+
+    private void tp(int x, int y, int z){
         //setAI(true);
         Vector v = relativeVector(new Vector(x,y,z)).multiply(0.1);
         for(int i=0; i<10; i++){
@@ -104,26 +141,22 @@ public class API{
 
     public void turnRight(){
         sleep(50);
-        setDirection(relativeVector(new Vector(0,0,1)));
+        robot.setDirection(relativeVector(new Vector(0,0,1)));
+        updateDirection();
     }
     
     public void turnLeft(){
         sleep(50);
-        setDirection(relativeVector(new Vector(0,0,-1)));
-    }
-
-    private void setDirection(Vector direction){
-        scheduler.scheduleSyncDelayedTask(plugin, () -> {
-            body.teleport(body.getLocation().setDirection(direction));
-        }, 0L);
-    }
-    
+        robot.setDirection(relativeVector(new Vector(0,0,-1)));
+        updateDirection();
+    }   
     public void breakBlock(int x, int y, int z){
         Vector v = relativeVector(new Vector(x,y,z));
         if(x > 1 || y > 1 || z > 1){
             warn("Can't break that block. I can only brak blocks near me.");
             return;
         }
+        sleep(500);
         
         scheduler.scheduleSyncDelayedTask(plugin, () -> {
             Block block = robot.getBody().getLocation().add(v).getBlock();
@@ -134,10 +167,9 @@ public class API{
                 info("Nothing was borken at "+blockPosition(block));
             }
         }, 0L);
-        sleep(500);
     }
 
-    public void setVelocity(float x, float y, float z){
+    private void setVelocity(float x, float y, float z){
         scheduler.scheduleSyncDelayedTask(plugin, () -> {
             robot.getBody().setVelocity(new Vector(x,y,z));
             robot.getBody().teleport(robot.getBody().getLocation().setDirection(new Vector(x,y,z)));
@@ -183,9 +215,11 @@ public class API{
     }
 
     private Vector relativeVector(Vector v){
+        print("rv" + v.toString());
+        print("rvd" + robot.getDirection().toString());
         Vector up = new Vector(0,1,0);
-        Vector right = robot.getBody().getLocation().getDirection().crossProduct(up).normalize();
-        Vector forward = robot.getBody().getLocation().getDirection().normalize();
+        Vector right = robot.getDirection().crossProduct(up).normalize();
+        Vector forward = robot.getDirection().normalize();
 
         return forward.multiply(v.getX()).add(up.multiply(v.getY())).add(right.multiply(v.getZ()));
     }
@@ -201,6 +235,13 @@ public class API{
     private void setAI(boolean v){
         scheduler.scheduleSyncDelayedTask(plugin, () -> {
             body.setAI(v);
+        }, 0L);
+    }
+
+    public void updateDirection(){
+        scheduler.scheduleSyncDelayedTask(plugin, () -> {
+            body.teleport(body.getLocation().setDirection(robot.getDirection()));
+            print(robot.getDirection().toString());
         }, 0L);
     }
 

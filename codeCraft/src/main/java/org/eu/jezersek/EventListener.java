@@ -83,11 +83,19 @@ public class EventListener implements Listener {
                     }
                 }
 
-                //robotBody.setAware(false);
-
                 Vector direction = result.getLocation().subtract(robotBody.getLocation()).toVector();
+                direction.setY(0);
+                if(Math.abs(direction.getX()) > Math.abs(direction.getZ())){
+                    direction.setZ(0);
+                }
+                else{
+                    direction.setX(0);
+                }
+
                 robotBody.teleport(robotBody.getLocation().setDirection(direction));
 
+
+                // Mak new Robot instance
                 plugin.addRobot(robotBody);
             }
 

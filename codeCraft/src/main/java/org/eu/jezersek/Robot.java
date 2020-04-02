@@ -14,6 +14,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.Vector;
 
 import de.tr7zw.nbtapi.NBTEntity;
 import de.tr7zw.nbtapi.NBTList;
@@ -31,6 +32,7 @@ class Robot implements InventoryHolder {
     private Inventory inventory;
     private Zombie body;
     private HumanEntity master;
+    private Vector direction;
     private Location lastLocation;
 
     // create new robot with empty inventory
@@ -61,11 +63,13 @@ class Robot implements InventoryHolder {
         } else {
             inventory = plugin.getInventoryManager().get(getID(), "Robot's Inventory", 2);
         }
-
+        setDirection();
         plugin.getInventoryManager().set(getID(), inventory);
     }
 
     public void run(String code, HumanEntity master) {
+        setDirection();
+
         api = new API(this, plugin);
         engine = manager.getEngineByName("JavaScript");
         engine.put("mc", api);
@@ -133,5 +137,29 @@ class Robot implements InventoryHolder {
 
     public Location getLastLocation() {
         return lastLocation;
+    }
+
+    public void setDirection(Vector direction){
+        direction.setY(0);
+        if(Math.abs(direction.getX()) > Math.abs(direction.getZ())){
+            direction.setZ(0);
+        }
+        else{
+            direction.setX(0);
+        }
+
+        this.direction = direction;
+        body.teleport(body.getLocation().setDirection(direction));
+    }
+
+    public void setDirection() {
+        Vector direction = body.getLocation().getDirection();
+
+        setDirection(direction);
+    }
+
+    public Vector getDirection() {
+        if(direction != null)return direction.clone();
+        return new Vector(1,-1,0);
     }
 }

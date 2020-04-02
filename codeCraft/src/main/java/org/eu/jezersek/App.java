@@ -241,6 +241,8 @@ public class App extends JavaPlugin {
         tag.setInteger("IsBaby", 1);
         tag.setInteger("Invulnerable", 0);
         tag.setBoolean("FallFlying", true);
+        tag.setIntArray("ArmorDropChances", new int[]{0,0,0,0});
+        tag.setIntArray("HandDropChances", new int[]{0,0});
         //tag.setInteger("DrownedConversionTime", Integer.MAX_VALUE);
         //tag.setShort("Air", Short.MAX_VALUE); // prevent robot from shakng
         NBTList<String> tags = tag.getStringList("Tags");
@@ -278,7 +280,11 @@ public class App extends JavaPlugin {
 
         NBTCompound followNBT = attributes.addCompound();
         followNBT.setString("Name", "generic.followRange");
-        followNBT.setInteger("Base", 0);
+        followNBT.setDouble("Base", 0d);
+
+        NBTCompound reinforcementsNBT = attributes.addCompound();
+        reinforcementsNBT.setString("Name", "zombie.spawnReinforcements");
+        reinforcementsNBT.setInteger("Base", 0);
 
         //set effects
         NBTCompoundList effectsNBT = tag.getCompoundList("ActiveEffects");
