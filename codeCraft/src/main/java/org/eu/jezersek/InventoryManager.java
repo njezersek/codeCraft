@@ -12,8 +12,7 @@ class InventoryManager{
 
     InventoryManager(App plugin){
         inventories = new HashMap<>();
-        this.db = new SQLite(plugin);
-        this.db.load();
+        this.db = plugin.getDb();
     }
 
     public Inventory get(String id){

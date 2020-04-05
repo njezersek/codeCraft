@@ -21,6 +21,13 @@ public class SQLite extends Database{
             "PRIMARY KEY (`id`)" + 
             ");";
 
+    public String SQLiteCreateProgramsTable = "CREATE TABLE IF NOT EXISTS programs (" +
+    "`id` varchar(36) NOT NULL," + 
+    "`xml` BLOB NOT NULL," +
+    "`js` BLOB NOT NULL," +
+    "PRIMARY KEY (`id`)" + 
+    ");";
+
 
     // SQL creation stuff, You can leave the blow stuff untouched.
     public Connection getSQLConnection() {
@@ -53,6 +60,7 @@ public class SQLite extends Database{
         try {
             Statement s = connection.createStatement();
             s.executeUpdate(SQLiteCreateTokensTable);
+            s.executeUpdate(SQLiteCreateProgramsTable);
             s.close();
         } catch (SQLException e) {
             e.printStackTrace();

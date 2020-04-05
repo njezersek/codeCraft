@@ -1,5 +1,13 @@
 package org.eu.jezersek;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -29,6 +37,7 @@ import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.SpawnEggMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
+import org.eu.jezersek.http.WebServer;
 
 import de.tr7zw.nbtapi.NBTCompound;
 import de.tr7zw.nbtapi.NBTCompoundList;
@@ -40,22 +49,30 @@ import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 
 public class App extends JavaPlugin {
-    //private Database db;
+    private Database db;
     private InventoryManager inventoryManager;
 
     Mob minion;
+
+    // Thread webServerThread;
+    WebServer webServer;
 
     HashMap<String, Robot> robots = new HashMap<>();
 
     ScriptEngineManager manager = new ScriptEngineManager();
     ScriptEngine engine = manager.getEngineByName("JavaScript");
-    
+
     API api;
 
-    
     @Override
     public void onEnable() {
         getLogger().info("Hello from jezersek.eu.org!");
+
+
+        //set up web server
+        webServer = new WebServer(this);
+        //webServerThread = new Thread(webServer);
+        //webServerThread.start();
         
         // register command: cc
         this.getCommand("cc").setExecutor(this);
@@ -78,19 +95,31 @@ public class App extends JavaPlugin {
         robotRecepie.addIngredient(Material.COMPARATOR);
         getServer().addRecipe(robotRecepie);
         
-        // initialise JS engine api
+        //initialise JS engine api
         //api = new API();
         //engine.put("mc", api);
 
         // initialise database
-        /*this.db = new SQLite(this);
-        this.db.load();*/
+        this.db = new SQLite(this);
+        this.db.load();
+
+        this.saveDefaultConfig();
 
         this.inventoryManager = new InventoryManager(this);
     }
 
     @Override
     public void onDisable() {
+        try {
+			webServer.httpServer.stop(0);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		synchronized (webServer) {
+			webServer.notifyAll();
+		}
+        //webServerThread.stop();
         getLogger().info("See you again, SpigotMC!");
     }
 
@@ -136,6 +165,18 @@ public class App extends JavaPlugin {
             player.sendMessage(b.getType().toString());
             /*for(Block b : sight){
             }*/
+        }
+
+        if(args[0].equals("stop")){
+            try {
+                webServer.httpServer.stop(0);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+    
+            synchronized (webServer) {
+                webServer.notifyAll();
+            }
         }
 
         // MOVE command
@@ -317,5 +358,9 @@ public class App extends JavaPlugin {
 
     public void addRobot(Zombie body){
         robots.put(body.getUniqueId().toString(), new Robot(this, body));
+    }
+
+    public Database getDb() {
+        return db;
     }
 }

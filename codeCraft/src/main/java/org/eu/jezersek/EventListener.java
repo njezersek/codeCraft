@@ -1,8 +1,12 @@
 package org.eu.jezersek;
 
+import java.util.LinkedList;
+import java.util.UUID;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
@@ -18,8 +22,10 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityTransformEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
+import org.bukkit.event.player.PlayerEditBookEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.CraftingInventory;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
@@ -27,17 +33,67 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Vector;
 
 import de.tr7zw.nbtapi.NBTEntity;
 import de.tr7zw.nbtapi.NBTItem;
 import de.tr7zw.nbtapi.NBTList;
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.TextComponent;
 
 public class EventListener implements Listener {
     App plugin;
 
     EventListener(App plugin) {
         this.plugin = plugin;
+    }
+
+    // Book edit event
+    // Make web interactable book
+    @EventHandler
+    public void playerEditBookEvent(PlayerEditBookEvent event) {
+        if(event.isSigning()){
+            BookMeta meta = event.getNewBookMeta();
+            String content = String.join("",meta.getPages());
+            //event.getPlayer().sendMessage(content);
+            content = ChatColor.stripColor(content);
+            if(content.equals("block program") || content.equals("program")){
+                event.getPlayer().sendMessage("ok");
+                String id = UUID.randomUUID().toString();
+                plugin.getDb().setProgram(id, "", "");
+                LinkedList<BaseComponent[]> pages = new LinkedList<>();
+                BaseComponent[] second = new ComponentBuilder(id).create();
+                
+                pages.add(second);
+                meta.spigot().setPages(pages);
+            }
+        }
+    }
+
+    // Offer link on web interactabl book use
+    @EventHandler
+    public void playerInteractEvent(PlayerInteractEvent event){
+        ItemStack item = event.getItem();
+        if(item.getType().equals(Material.WRITTEN_BOOK)){
+            BookMeta meta = (BookMeta) item.getItemMeta();
+            String content = String.join("",meta.getPages());
+            content = ChatColor.stripColor(content);
+            String xml = plugin.getDb().getProgramXML(content);
+            
+            if(xml != null){
+
+                TextComponent message = new TextComponent(ChatColor.GREEN+"[EDIT PROGRAM]");
+                message.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "http://" + plugin.getConfig().getString("server-address") + ":" + plugin.getConfig().getInt("port") + "/?id=" + content));
+                message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        new ComponentBuilder("Edit this program in web editior.").create()));
+                event.getPlayer().spigot().sendMessage(message);
+                event.setCancelled(true);
+            }
+        }
     }
 
     // Get armor clor from crafting Robot Egg
@@ -204,7 +260,7 @@ public class EventListener implements Listener {
             for(ItemStack item : contents){
                 if(item == null)continue;
                 //event.getPlayer().sendMessage(""+ChatColor.AQUA+item.getType().toString());
-                if(item.getType().equals(Material.WRITABLE_BOOK)){
+                if(item.getType().equals(Material.WRITABLE_BOOK) || item.getType().equals(Material.WRITTEN_BOOK)){
                     book = item;
                     break;
                 }
@@ -214,13 +270,16 @@ public class EventListener implements Listener {
             if(book != null){
                 //event.getPlayer().sendMessage(ChatColor.DARK_BLUE+"Program found!:");
                 BookMeta meta = (BookMeta) book.getItemMeta();
-                String program = String.join("",meta.getPages());
-                //program = program.replaceAll("§0", "");
-                program = ChatColor.stripColor(program);
-                //program = "mc.println(\"Hello World\");";
-                //System.out.println("========== PROGRAM ==========");
-                //System.out.println(program);
-                //System.out.println("==========   END   ==========");
+                String content = String.join("",meta.getPages());
+                //content = content.replaceAll("§0", "");
+                content = ChatColor.stripColor(content);
+                //content = "mc.println(\"Hello World\");";
+                String program = plugin.getDb().getProgramJS(content);
+                if(program == null || program.equals(""))program = content;
+                /*System.out.println("========== PROGRAM ==========");
+                System.out.println(program);
+                System.out.println("==========   END   ==========");*/
+
                 robot.run(program, player);
                 //event.getPlayer().sendMessage(program);
             }

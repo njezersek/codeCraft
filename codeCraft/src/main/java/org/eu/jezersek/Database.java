@@ -116,6 +116,92 @@ public abstract class Database {
         }
     }
 
+    public void setProgram(String id, String xml, String js){
+        Connection conn = null;
+        PreparedStatement ps = null;
+
+        try {
+            conn = getSQLConnection();
+            ps = conn.prepareStatement("INSERT OR REPLACE INTO programs (id, xml, js) VALUES (?, ?, ?)");
+            ps.setString(1, id);
+            ps.setString(2, xml);
+            ps.setString(3, js);
+            ps.executeUpdate();
+        } catch (SQLException ex) {
+            plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionExecute(), ex);
+        } finally {
+            try {
+                if (ps != null)
+                    ps.close();
+                if (conn != null)
+                    conn.close();
+            } catch (SQLException ex) {
+                plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionClose(), ex);
+            }
+        }
+    }
+
+    public String getProgramJS(String id){
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+
+        try{
+            conn = getSQLConnection();
+            ps = conn.prepareStatement("SELECT * FROM programs WHERE id = ?");
+            ps.setString(1, id);
+
+            rs = ps.executeQuery();
+
+            if(rs.next()){
+                return rs.getString("js");
+            }
+        }catch (SQLException ex) {
+            plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionExecute(), ex);
+        } finally {
+            try {
+                if (ps != null)
+                    ps.close();
+                if (conn != null)
+                    conn.close();
+            } catch (SQLException ex) {
+                plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionClose(), ex);
+            }
+        }
+        return "";
+    }
+
+    public String getProgramXML(String id){
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+
+        try{
+            conn = getSQLConnection();
+            ps = conn.prepareStatement("SELECT * FROM programs WHERE id = ?");
+            ps.setString(1, id);
+
+            rs = ps.executeQuery();
+
+            if(rs.next()){
+                return rs.getString("xml");
+            }
+        }catch (SQLException ex) {
+            plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionExecute(), ex);
+        } finally {
+            try {
+                if (ps != null)
+                    ps.close();
+                if (conn != null)
+                    conn.close();
+            } catch (SQLException ex) {
+                plugin.getLogger().log(Level.SEVERE, Errors.sqlConnectionClose(), ex);
+            }
+        }
+        return null;
+    }
+
+
     public void close(PreparedStatement ps,ResultSet rs){
         try {
             if (ps != null)
