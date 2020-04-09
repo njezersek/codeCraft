@@ -1,10 +1,17 @@
 package org.eu.jezersek;
 
+import java.util.Collection;
+import java.util.function.Predicate;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.Directional;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Zombie;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
@@ -29,23 +36,58 @@ public class API{
         this.plugin = plugin;
     }
 
-    public void announce(String s) {
-        Bukkit.getServer().broadcastMessage(s);
-    }
-
-    public void print(String s){
-        robot.getMaster().sendMessage(s);
-    }
-
-    public void sleep(long ms){
-        try {
-            Thread.sleep(ms);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+    // MOVMENT
+    public void move(String direction){
+        Vector d = new Vector(0,0,0);
+        if(direction.equals("forward")){
+            d.setX(1);
         }
+        else if(direction.equals("backward")){
+            d.setX(-1);
+        }
+        else if(direction.equals("left")){
+            d.setY(-1);
+        }
+        else if(direction.equals("right")){
+            d.setY(1);
+        }
+
+        Vector v = relativeVector(d);
+        updateDirection();
+        moveXY(v.getX(), v.getZ());
     }
 
-    private void move(double x, double y){
+    public void turn(String direction){
+        Vector v = new Vector(1,0,0);
+        if(direction.equals("right")){
+            v = new Vector(0,0,1);
+        }
+        else if(direction.equals("left")){
+            v = new Vector(0,0,-1);
+        }
+        else if(direction.equals("around")){
+            v = new Vector(-1,0,0);
+        }
+        sleep(50);
+        robot.setDirection(relativeVector(v));
+        updateDirection();
+    }
+
+    public void jump(){
+        updateDirection();
+        scheduler.scheduleSyncDelayedTask(plugin, () -> {
+            if(body.isOnGround()){
+                Vector direction = new Vector(0,0.5,0);
+                robot.getBody().setVelocity(robot.getBody().getVelocity().add(direction));
+            }
+            else{
+                warn("Can't jump if not on ground!");
+            }
+        }, 0L);
+        sleep(50);
+    }
+
+    private void moveXY(double x, double y){
         Location destination = robot.getBody().getLocation();
         destination.add(x, 0, y);
         // align destination with block
@@ -100,31 +142,8 @@ public class API{
             body.teleport(center);
         },0L);
     }
-
-    public void forward(){
-        updateDirection();
-        Vector v = relativeVector(new Vector(1,0,0));
-        print(v.getX() + ", " + v.getY());
-        move(v.getX(), v.getZ());
-    }
-
-    public void jump(){
-        updateDirection();
-        scheduler.scheduleSyncDelayedTask(plugin, () -> {
-            if(body.isOnGround()){
-                Vector direction = new Vector(0,0.5,0);
-                robot.getBody().setVelocity(robot.getBody().getVelocity().add(direction));
-            }
-            else{
-                warn("Can't jump if not on ground!");
-            }
-        }, 0L);
-        sleep(50);
-    }
-
-
+   
     private void tp(int x, int y, int z){
-        //setAI(true);
         Vector v = relativeVector(new Vector(x,y,z)).multiply(0.1);
         for(int i=0; i<10; i++){
             scheduler.scheduleSyncDelayedTask(plugin, () -> {
@@ -133,21 +152,187 @@ public class API{
             sleep(50);
         }
         info("Robot moved, to "+blockPosition(body.getLocation()));
-        //setAI(false);
+    }
+   
+    private void setVelocity(float x, float y, float z){
+        scheduler.scheduleSyncDelayedTask(plugin, () -> {
+            robot.getBody().setVelocity(new Vector(x,y,z));
+            robot.getBody().teleport(robot.getBody().getLocation().setDirection(new Vector(x,y,z)));
+        }, 0L);
     }
 
-    public void turnRight(){
-        sleep(50);
-        robot.setDirection(relativeVector(new Vector(0,0,1)));
-        updateDirection();
+    private Vector relativeVector(Vector v){
+        //print("rv" + v.toString());
+        //print("rvd" + robot.getDirection().toString());
+        Vector up = new Vector(0,1,0);
+        Vector right = robot.getDirection().crossProduct(up).normalize();
+        Vector forward = robot.getDirection().normalize();
+
+        return forward.multiply(v.getX()).add(up.multiply(v.getY())).add(right.multiply(v.getZ()));
+    }
+
+    // INVENTORY
+
+    public void drop(int n, int slot){
+        scheduler.scheduleSyncDelayedTask(plugin, () -> {
+            ItemStack[] inventory = robot.getInventory().getContents();
+            if(n < 0 || n >= inventory.length){
+                warn("Nothing was droped. Inventory index is out of bounds!");
+                return;
+            }
+            ItemStack item = inventory[n];
+            if(item == null){
+                warn("Nothing was droped.");
+                return;
+            }
+            if(n < 1){
+                warn("Nothing was dorped. Paremeter n must be greater than 0");
+                return;
+            }
+            ItemStack clone = item.clone();
+            int availableN = n;
+            if(n > item.getAmount())availableN = item.getAmount();
+            int amount = item.getAmount()-n;
+            if(availableN > 0){
+                clone.setAmount(availableN);
+                body.getWorld().dropItem(body.getLocation(), clone);
+                if(availableN == n)info("Droped "+availableN+" "+clone.getType().toString() +" from slot " + slot + ".");
+                else if(n == Integer.MAX_VALUE)info("Droped "+availableN+" "+clone.getType().toString() +" from slot " + slot + ".");
+                else warn("Droped only "+availableN+" "+clone.getType().toString() +" from slot " + slot + ".");
+            }
+            item.setAmount(amount);
+            robot.saveInventory();
+        }, 0L);
+    }
+
+    public void dropAll(int slot){
+        drop(Integer.MAX_VALUE, slot);
+    }
+
+    public void setTool(int index){
+        scheduler.scheduleSyncDelayedTask(plugin, () -> {
+            ItemStack[] inventory = robot.getInventory().getContents();
+            if(index < 0 || index >= inventory.length){
+                warn("Inventory index is out of bounds! No tool was set.");
+                return;
+            }
+            ItemStack item = inventory[index];
+            if(item == null){
+                //info("There is no item on slot " + index + ".");
+                robot.getBody().getEquipment().setItemInMainHand(new ItemStack(Material.AIR));
+            }
+            robot.getBody().getEquipment().setItemInMainHand(item);
+        }, 0L);
     }
     
-    public void turnLeft(){
-        sleep(50);
-        robot.setDirection(relativeVector(new Vector(0,0,-1)));
-        updateDirection();
-    }   
-    public void breakBlock(int x, int y, int z){
+    public void pickUp(String type, int index){
+        scheduler.scheduleSyncDelayedTask(plugin, () -> {
+            ItemStack[] inventory = robot.getInventory().getContents();
+            if(index < 0 || index >= inventory.length){
+                warn("Inventory index is out of bounds!");
+                return;
+            }
+
+            Collection<Entity> items = body.getWorld().getNearbyEntities(body.getLocation(), 2, 2, 2, new Predicate<Entity>(){
+                @Override
+                public boolean test(Entity e) {
+                    return e.getType().equals(EntityType.DROPPED_ITEM);
+                }
+            });
+
+            Item item = null;
+            double dmin = Double.POSITIVE_INFINITY;
+            for(Entity i : items){
+                Item ii = (Item)i;
+                double distance = body.getLocation().distanceSquared(i.getLocation());
+                if(distance < dmin){
+                    if(ii.getItemStack().getType().toString().equals(type) || type.equals("*"))
+                    dmin = distance;
+                    item = (Item) i;
+                }
+            }
+
+            if(item != null){  
+                if(inventory[index] == null || inventory[index].getType().equals(Material.AIR)){ // if inventory slot is free
+                    robot.getInventory().setItem(index, item.getItemStack());
+                    info("Picked up "+item.getItemStack().getType().toString() + " and stored in slot " + index + ".");
+                    item.remove();
+                }
+                else if(inventory[index].isSimilar(item.getItemStack())){ // if item type is the same
+                    int spaceLeft = inventory[index].getMaxStackSize() - inventory[index].getAmount();
+                    int itemsToPick = item.getItemStack().getAmount();
+                    if(itemsToPick > spaceLeft)itemsToPick = spaceLeft;
+                    inventory[index].setAmount(inventory[index].getAmount() + itemsToPick);
+                    info("Picked up "+item.getItemStack().getType().toString() + " and stored in slot " + index + ".");
+                    item.getItemStack().setAmount(item.getItemStack().getAmount() - itemsToPick);
+                }
+                else{
+                    warn("Not enough space in inventory.");
+                }
+                robot.saveInventory();
+            }
+            else{
+                warn("No items found.");
+            }
+        }, 0L);
+    }
+
+    public void pickUpAny(int index){
+        pickUp("*", index);
+    }
+
+    public void swapInventory(int a, int b){
+        scheduler.scheduleSyncDelayedTask(plugin, () -> {
+            ItemStack[] inventory = robot.getInventory().getContents();
+            if(a < 0 || a >= inventory.length){
+                warn("First index ("+a+") is out of bounds!");
+                return;
+            }
+            else if(b < 0 || b >= inventory.length){
+                warn("Second index ("+b+") is out of bounds!");
+                return;
+            }
+            ItemStack itemA = inventory[b];
+            ItemStack itemB = inventory[a];
+            robot.getInventory().setItem(a, itemA);
+            robot.getInventory().setItem(b, itemB);
+
+            robot.saveInventory();
+        }, 0L);
+    }
+
+    public int inventoryIndex(String type){
+        ItemStack[] inventory = robot.getInventory().getContents();
+        for(int i = 0; i<inventory.length; i++){
+            ItemStack item = inventory[i];
+            if(item.getType().toString().equals(type)){
+                return i;
+            }
+        }
+        warn("No slot with such item found.");
+        return -1;
+    }
+
+    public int firstFreeSlot(){
+        ItemStack[] inventory = robot.getInventory().getContents();
+        for(int i = 0; i<inventory.length; i++){
+            ItemStack item = inventory[i];
+            if(item == null || item.getType().equals(Material.AIR)){
+                return i;
+            }
+        }
+        warn("No empty slots found.");
+        return -1;
+    }
+
+
+    // WORKING
+    public void breakBlock(String direction){
+        Vector v = direction2vect(direction);
+        breakBlock(v.getX(), v.getY(), v.getZ());
+    }
+
+    private void breakBlock(double x, double y, double z){
         Vector v = relativeVector(new Vector(x,y,z));
         if(x > 1 || y > 1 || z > 1){
             warn("Can't break that block. I can only brak blocks near me.");
@@ -157,8 +342,9 @@ public class API{
         
         scheduler.scheduleSyncDelayedTask(plugin, () -> {
             Block block = robot.getBody().getLocation().add(v).getBlock();
+            String type = block.getType().toString();
             if(block.breakNaturally()){
-                info("Broken "+block.getType().toString()+" at "+blockPosition(block));
+                info("Broken "+type+" at "+blockPosition(block));
             }
             else{
                 info("Nothing was borken at "+blockPosition(block));
@@ -166,25 +352,49 @@ public class API{
         }, 0L);
     }
 
-    private void setVelocity(float x, float y, float z){
+    public void place(int index, String direction, String blockDirection){
+        Vector v = relativeVector(direction2vect(direction));
+
         scheduler.scheduleSyncDelayedTask(plugin, () -> {
-            robot.getBody().setVelocity(new Vector(x,y,z));
-            robot.getBody().teleport(robot.getBody().getLocation().setDirection(new Vector(x,y,z)));
+            ItemStack[] inventory = robot.getInventory().getContents();
+            if(index < 0 || index >= inventory.length){
+                warn("Inventory slot ("+index+") is out of bounds!");
+                return;
+            }
+            Block block = robot.getBody().getLocation().add(v).getBlock();
+            if(block.getType().equals(Material.AIR)){
+                if(inventory[index].getType().isBlock()){
+                    block.setType(inventory[index].getType());
+                    inventory[index].setAmount(inventory[index].getAmount()-1);
+
+                    if(block.getBlockData() instanceof Directional){
+                        Directional directionData = (Directional) block.getBlockData();
+                        directionData.setFacing(BlockFace.valueOf(blockDirection));
+                        block.setBlockData(directionData);
+                        print("directional " + directionData.getFacing());
+                    }
+
+                    info("Block ("+inventory[index].getType().toString()+") was placed at " + blockPosition(block) + ".");
+                }
+                else{
+                    warn("No blocks placed. " + inventory[index].getType().toString() + " is not a placable block.");
+                }
+            }
+            else{
+                warn("No blocks placed. No space at " + blockPosition(block) + ".");
+            }
         }, 0L);
     }
 
-    public void setTool(int index){
-        ItemStack[] inventory = robot.getInventory().getContents();
-        if(index < 0 || index >= inventory.length){
-            warn("Inventory index is out of bounds! No tool was set.");
-            return;
-        }
-        ItemStack item = inventory[index];
-        if(item == null){
-            //info("There is no item on slot " + index + ".");
-            robot.getBody().getEquipment().setItemInMainHand(new ItemStack(Material.AIR));
-        }
-        robot.getBody().getEquipment().setItemInMainHand(item);
+
+    // COMUNICATION
+
+    public void announce(String s) {
+        Bukkit.getServer().broadcastMessage(s);
+    }
+
+    public void print(String s){
+        robot.getMaster().sendMessage(s);
     }
 
     public void error(String s){
@@ -211,15 +421,47 @@ public class API{
         }
     }
 
-    private Vector relativeVector(Vector v){
-        print("rv" + v.toString());
-        print("rvd" + robot.getDirection().toString());
-        Vector up = new Vector(0,1,0);
-        Vector right = robot.getDirection().crossProduct(up).normalize();
-        Vector forward = robot.getDirection().normalize();
 
-        return forward.multiply(v.getX()).add(up.multiply(v.getY())).add(right.multiply(v.getZ()));
+    // OTHER
+
+    public void sleep(long ms){
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }   
+
+    public Vector direction2vect(String direction){
+        Vector v = new Vector(0,0,0);
+        if(direction.equals("below")){
+            v.setY(-1);
+        }
+        else if(direction.equals("above")){
+            v.setY(1);
+        }
+        else if(direction.equals("front")){
+            v.setX(1);
+        }
+        else if(direction.equals("behind")){
+            v.setX(-1);
+        }
+        else if(direction.equals("left")){
+            v.setZ(-1);
+        }
+        else if(direction.equals("right")){
+            v.setZ(1);
+        }
+        return v;
     }
+
+
+
+    
+
+    
+
+
 
     private String blockPosition(Location l){
         return blockPosition(l.getBlock());
@@ -238,7 +480,6 @@ public class API{
     public void updateDirection(){
         scheduler.scheduleSyncDelayedTask(plugin, () -> {
             body.teleport(body.getLocation().setDirection(robot.getDirection()));
-            print(robot.getDirection().toString());
         }, 0L);
     }
 

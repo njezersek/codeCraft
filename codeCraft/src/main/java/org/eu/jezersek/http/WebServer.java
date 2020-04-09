@@ -12,7 +12,7 @@ public class WebServer{
 
     public WebServer(App plugin) {
         try {
-            httpServer = HttpServer.create(new InetSocketAddress(8001), 0);
+            httpServer = HttpServer.create(new InetSocketAddress(plugin.getConfig().getInt("port")), 0);
             httpServer.createContext("/", new RequestHandler(plugin));
             httpServer.setExecutor(null);
             httpServer.start();

@@ -17,7 +17,7 @@ Blockly.JavaScript['jump'] = function(block) {
 
 Blockly.JavaScript['break'] = function(block) {
   var dropdown_direction = block.getFieldValue('direction');
-  var code = 'mc.break("'+dropdown_direction+'");\n';
+  var code = 'mc.breakBlock("'+dropdown_direction+'");\n';
   return code;
 };
 
@@ -49,7 +49,7 @@ Blockly.JavaScript['place'] = function(block) {
   var value_slot = Blockly.JavaScript.valueToCode(block, 'slot', Blockly.JavaScript.ORDER_ATOMIC);
   var dropdown_directioin = block.getFieldValue('directioin');
   var dropdown_block_directioin = block.getFieldValue('block_directioin');
-  var code = 'mc.place("'+dropdown_directioin+'", "'+dropdown_block_directioin+'");\n';
+  var code = 'mc.place('+value_slot+',"'+dropdown_directioin+'", "'+dropdown_block_directioin+'");\n';
   return code;
 };
 
@@ -81,13 +81,13 @@ Blockly.JavaScript['free_slot'] = function(block) {
 Blockly.JavaScript['drop'] = function(block) {
   var value_n = Blockly.JavaScript.valueToCode(block, 'n', Blockly.JavaScript.ORDER_ATOMIC);
   var value_slot = Blockly.JavaScript.valueToCode(block, 'slot', Blockly.JavaScript.ORDER_ATOMIC);
-  var code = 'drop('+value_slot+', '+value_n+');\n';
+  var code = 'mc.drop('+value_slot+', '+value_n+');\n';
   return code;
 };
 
 Blockly.JavaScript['drop_all'] = function(block) {
   var value_slot = Blockly.JavaScript.valueToCode(block, 'slot', Blockly.JavaScript.ORDER_ATOMIC);
-  var code = 'dropAll('+value_slot+');\n';
+  var code = 'mc.dropAll('+value_slot+');\n';
   return code;
 };
 
@@ -120,5 +120,11 @@ Blockly.JavaScript['get_block'] = function(block) {
 
 Blockly.JavaScript['get_direction'] = function(block) {
   var code = 'mc.getDirection()';
+  return [code, Blockly.JavaScript.ORDER_NONE];
+};
+
+Blockly.JavaScript['sleep'] = function(block) {
+  var value_time = Blockly.JavaScript.valueToCode(block, 'time', Blockly.JavaScript.ORDER_ATOMIC);
+  var code = 'mc.sleep('+value_time+')';
   return [code, Blockly.JavaScript.ORDER_NONE];
 };

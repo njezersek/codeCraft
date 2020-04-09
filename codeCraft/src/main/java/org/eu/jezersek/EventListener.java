@@ -83,9 +83,10 @@ public class EventListener implements Listener {
             String content = String.join("",meta.getPages());
             content = ChatColor.stripColor(content);
             String xml = plugin.getDb().getProgramXML(content);
+            String js = plugin.getDb().getProgramJS(content);
             
             if(xml != null){
-
+                event.getPlayer().sendMessage(js);
                 TextComponent message = new TextComponent(ChatColor.GREEN+"[EDIT PROGRAM]");
                 message.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "http://" + plugin.getConfig().getString("server-address") + ":" + plugin.getConfig().getInt("port") + "/?id=" + content));
                 message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,

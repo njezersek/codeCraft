@@ -75,7 +75,7 @@ public class RequestHandler implements HttpHandler {
 		String requestPath = t.getRequestURI().getPath();
 		if (requestPath.equals("/"))
 			requestPath = "/index.html";
-			System.out.println("Incoming requiest: " + requestPath);
+			//System.out.println("Incoming requiest: " + requestPath);
 		try {
 			String query = t.getRequestURI().getQuery();
 			String id = queryToMap(query).get("id");
@@ -93,9 +93,9 @@ public class RequestHandler implements HttpHandler {
 
 				serveHTML("saved", t);
 			} else if (requestPath.equals("/index.html")) {
-				System.out.println(id);
+				//System.out.println(id);
 				String index = getFileContents(requestPath);
-				System.out.println("INDEX.HTML");
+				//System.out.println("INDEX.HTML");
 				String workspace = plugin.getDb().getProgramXML(id);
 				if (workspace == null)
 					workspace = "";
