@@ -94,6 +94,8 @@ public class App extends JavaPlugin {
         robotRecepie.addIngredient(Material.REDSTONE_TORCH);
         robotRecepie.addIngredient(Material.COMPARATOR);
         getServer().addRecipe(robotRecepie);
+
+        getServer().getScheduler().scheduleSyncRepeatingTask(this, new TickHandler(this), 0L, 1L);
         
         //initialise JS engine api
         //api = new API();
@@ -110,6 +112,7 @@ public class App extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        getServer().getScheduler().cancelTasks(this);
         try {
 			webServer.httpServer.stop(0);
 		} catch (Exception e) {
@@ -362,5 +365,9 @@ public class App extends JavaPlugin {
 
     public Database getDb() {
         return db;
+    }
+
+    public HashMap<String, Robot> getRobots(){
+        return robots;
     }
 }

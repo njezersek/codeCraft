@@ -136,7 +136,7 @@ class Robot implements InventoryHolder {
     }
 
     public Location getLastLocation() {
-        return lastLocation;
+        return lastLocation.clone();
     }
 
     public void setDirection(Vector direction){

@@ -5,6 +5,7 @@
 /home/coronacraft/spigot_plugin/codeCraft/src/main/java/org/eu/jezersek/InventorySerializator.java
 /home/coronacraft/spigot_plugin/codeCraft/src/main/java/org/eu/jezersek/http/RequestHandler.java
 /home/coronacraft/spigot_plugin/codeCraft/src/main/java/org/eu/jezersek/Error.java
+/home/coronacraft/spigot_plugin/codeCraft/src/main/java/org/eu/jezersek/TickHandler.java
 /home/coronacraft/spigot_plugin/codeCraft/src/main/java/org/eu/jezersek/InventoryManager.java
 /home/coronacraft/spigot_plugin/codeCraft/src/main/java/org/eu/jezersek/Errors.java
 /home/coronacraft/spigot_plugin/codeCraft/src/main/java/org/eu/jezersek/EventListener.java

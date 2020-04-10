@@ -284,7 +284,7 @@ Blockly.Blocks['get_direction'] = {
 Blockly.Blocks['sleep'] = {
   init: function() {
     this.appendValueInput("NAME")
-        .setCheck(null)
+        .setCheck("Number")
         .appendField("sleep");
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);

@@ -77,14 +77,14 @@ public class API{
         updateDirection();
         scheduler.scheduleSyncDelayedTask(plugin, () -> {
             if(body.isOnGround()){
-                Vector direction = new Vector(0,0.5,0);
-                robot.getBody().setVelocity(robot.getBody().getVelocity().add(direction));
+                Vector direction = new Vector(0,0.55,0);
+                robot.getBody().setVelocity(direction);
             }
             else{
                 warn("Can't jump if not on ground!");
             }
         }, 0L);
-        sleep(50);
+        sleep(300);
     }
 
     private void moveXY(double x, double y){
@@ -94,7 +94,7 @@ public class API{
         destination.setX(Math.floor(destination.getX()) + 0.5);
         destination.setZ(Math.floor(destination.getZ()) + 0.5);
         
-        if(!destination.getBlock().isPassable()){ // block in robots path
+        /*if(!destination.getBlock().isPassable()){ // block in robots path
             if(destination.getBlock().getRelative(BlockFace.UP).isPassable()){ // robot can jump on that block
                 scheduler.scheduleSyncDelayedTask(plugin, () -> { 
                     Vector direction = new Vector(0,0.5,0);
@@ -105,31 +105,39 @@ public class API{
                 warn("I can't go through blocks");
                 return;
             }
-        }
-
+        }*/
         destination.setY(0);
+        
         robot.setLastLocation(robot.getBody().getLocation());
         double d = robot.getLastLocation().distance(destination);
         //print("Destination: " + blockPosition(destination) + " lastLocation: " + blockPosition(robot.getLastLocation()) + "d: " + d);
         int timeOut = 0;
         
-        while(d > 0.1){
+        while(d > 0.05){
             Location last = robot.getLastLocation().clone();
             last.setY(0);
 
-            Vector direction = destination.clone().subtract(last).toVector().normalize().multiply(0.01);
+            Vector direction = destination.clone().subtract(last).toVector().normalize();
             d = last.distance(destination);
             //print(timeOut + " : " + d + " - (" + direction.getX() + ", " + direction.getY() + ", " + direction.getZ() + ")" );
             scheduler.scheduleSyncDelayedTask(plugin, () -> {
-                robot.getBody().setVelocity(robot.getBody().getVelocity().add(direction));
+                Vector velocity = robot.getBody().getVelocity();
+                double currentVelecityInDirection = Math.abs(velocity.dot(direction));
+                double targetVelovity = 0.07;
+                double velocityIncrement = targetVelovity-currentVelecityInDirection;
+                //print("velocity " + currentVelecityInDirection);
+                if(velocityIncrement < 0)velocityIncrement = 0;
+                direction.multiply(velocityIncrement);
+                velocity.add(direction);
+                robot.getBody().setVelocity(velocity);
             }, 0L);
-            if(timeOut++ > 100)break;
             sleep(20);
+            if(timeOut++ > 100)break;
             scheduler.scheduleSyncDelayedTask(plugin, () -> {
                 robot.setLastLocation(body.getLocation());  
             }, 0L);
         }
-        center();
+        //center();
         
         //robot.getBody().setVelocity(new Vector(0,0,0));
     }
@@ -384,6 +392,44 @@ public class API{
                 warn("No blocks placed. No space at " + blockPosition(block) + ".");
             }
         }, 0L);
+    }
+
+    public String getBlockType(String direction){
+        Vector v = relativeVector(direction2vect(direction));
+        return body.getLocation().add(v).getBlock().getType().toString();
+    }
+
+    public String getBlockTypeAt(double x, double y, double z){
+        Vector v = relativeVector(new Vector(x, y, z));
+        return body.getLocation().add(v).getBlock().getType().toString();
+    }
+
+    public int getCoordinate(String c){
+        Block l = body.getLocation().getBlock();
+        if(c.equals("x")){
+            return l.getX();
+        }
+        if(c.equals("y")){
+            return l.getY();
+        }
+        if(c.equals("z")){
+            return l.getZ();
+        }
+        error("Coordinate label \""+c+"\" is invalid.");
+        return 0;
+    }
+
+    public String getDirection(){
+        Vector d = robot.getLastLocation().getDirection();
+        if(Math.abs(d.getX()) > Math.abs(d.getZ())){
+            if(d.getX() > 0)return "EAST";
+            else return "WEST";
+        } 
+        else{
+            if(d.getZ() > 0)return "SOUTH";
+            else return "NORTH";
+        }
+        
     }
 
 
