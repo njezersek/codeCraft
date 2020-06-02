@@ -39,6 +39,12 @@ Blockly.JavaScript['block'] = function(block) {
   return [code, Blockly.JavaScript.ORDER_NONE];
 };
 
+Blockly.JavaScript['blockText'] = function(block) {
+  var dropdown_name = block.getFieldValue('NAME');
+  var code = '\''+dropdown_name+'\'';
+  return [code, Blockly.JavaScript.ORDER_NONE];
+};
+
 Blockly.JavaScript['print'] = function(block) {
   var value_s = Blockly.JavaScript.valueToCode(block, 's', Blockly.JavaScript.ORDER_ATOMIC);
   var code = 'mc.print('+value_s+');\n';

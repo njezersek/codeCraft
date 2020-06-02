@@ -3,10 +3,8 @@ package org.eu.jezersek;
 import java.util.LinkedList;
 import java.util.UUID;
 
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
@@ -15,11 +13,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
-import org.bukkit.event.entity.EntityAirChangeEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
-import org.bukkit.event.entity.EntityTransformEvent.TransformReason;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityTransformEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerEditBookEvent;
@@ -33,7 +28,6 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
-import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Vector;
 
 import de.tr7zw.nbtapi.NBTEntity;
@@ -189,6 +183,8 @@ public class EventListener implements Listener {
                 NBTEntity nbte = new NBTEntity(entity);
                 NBTList<String> tags = nbte.getStringList("Tags");
                 if(!tags.contains("genuineRobot"))return; // only handle entities with tag genuineRobot
+
+                plugin.getRobot(robotBody).stop(); // stop any program that may be still running
                 
                 ItemStack robotSpawnEgg = plugin.makeRobotSpawnEgg(equipment.getBoots(), equipment.getLeggings(), equipment.getChestplate(), equipment.getHelmet(), entity.getUniqueId().toString());
                 entity.getWorld().dropItem(entity.getLocation(), robotSpawnEgg);
@@ -228,7 +224,7 @@ public class EventListener implements Listener {
         //event.getPlayer().sendMessage("Opening Inventory of robot:"+ChatColor.AQUA+body.getUniqueId().toString());
         Robot robot = plugin.getRobot(body);
         Inventory robotInventory = robot.getInventory();
-        TmpInventoryHolder h = (TmpInventoryHolder) robotInventory.getHolder();
+        //TmpInventoryHolder h = (TmpInventoryHolder) robotInventory.getHolder();
         //event.getPlayer().sendMessage("Opening Inventory of holder:"+ChatColor.RED+h.getEntityId());
 
         robot.stop(); // stop program
@@ -247,7 +243,7 @@ public class EventListener implements Listener {
         if(h instanceof TmpInventoryHolder){ // only handle RobotInventories
             TmpInventoryHolder holder = (TmpInventoryHolder) h;
             //event.getPlayer().sendMessage("Closing Inventory of robot:"+ChatColor.AQUA+holder.getEntityId());
-            Inventory robotsInventory = event.getInventory();
+            //Inventory robotsInventory = event.getInventory();
             Robot robot = plugin.getRobot(holder.getEntityId());
             
             if(robot != null){

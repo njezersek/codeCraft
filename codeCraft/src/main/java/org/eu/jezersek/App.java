@@ -1,13 +1,5 @@
 package org.eu.jezersek;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -161,7 +153,7 @@ public class App extends JavaPlugin {
         }
 
         if(args[0].equals("sight")){
-            List<Block> sight = player.getLineOfSight(null, 3);
+            //List<Block> sight = player.getLineOfSight(null, 3);
 
             Block b = player.getWorld().rayTraceBlocks(player.getEyeLocation(), player.getEyeLocation().getDirection(), 5, FluidCollisionMode.NEVER, false).getHitBlock();
 

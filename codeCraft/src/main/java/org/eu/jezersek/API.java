@@ -46,10 +46,10 @@ public class API{
             d.setX(-1);
         }
         else if(direction.equals("left")){
-            d.setY(-1);
+            d.setZ(-1);
         }
         else if(direction.equals("right")){
-            d.setY(1);
+            d.setZ(1);
         }
 
         Vector v = relativeVector(d);
@@ -113,7 +113,7 @@ public class API{
         //print("Destination: " + blockPosition(destination) + " lastLocation: " + blockPosition(robot.getLastLocation()) + "d: " + d);
         int timeOut = 0;
         
-        while(d > 0.05){
+        while(d > 0.2){
             Location last = robot.getLastLocation().clone();
             last.setY(0);
 
@@ -123,11 +123,11 @@ public class API{
             scheduler.scheduleSyncDelayedTask(plugin, () -> {
                 Vector velocity = robot.getBody().getVelocity();
                 double currentVelecityInDirection = Math.abs(velocity.dot(direction));
-                double targetVelovity = 0.07;
+                double targetVelovity = 0.15;
                 double velocityIncrement = targetVelovity-currentVelecityInDirection;
                 //print("velocity " + currentVelecityInDirection);
                 if(velocityIncrement < 0)velocityIncrement = 0;
-                direction.multiply(velocityIncrement);
+                direction.multiply(velocityIncrement*last.distance(destination));
                 velocity.add(direction);
                 robot.getBody().setVelocity(velocity);
             }, 0L);
@@ -313,6 +313,7 @@ public class API{
         ItemStack[] inventory = robot.getInventory().getContents();
         for(int i = 0; i<inventory.length; i++){
             ItemStack item = inventory[i];
+            if(item == null)continue;
             if(item.getType().toString().equals(type)){
                 return i;
             }
@@ -320,10 +321,11 @@ public class API{
         warn("No slot with such item found.");
         return -1;
     }
-
+    
     public int firstFreeSlot(){
         ItemStack[] inventory = robot.getInventory().getContents();
         for(int i = 0; i<inventory.length; i++){
+            if(item == null)continue;
             ItemStack item = inventory[i];
             if(item == null || item.getType().equals(Material.AIR)){
                 return i;
@@ -346,7 +348,7 @@ public class API{
             warn("Can't break that block. I can only brak blocks near me.");
             return;
         }
-        sleep(500);
+        sleep(500);     
         
         scheduler.scheduleSyncDelayedTask(plugin, () -> {
             Block block = robot.getBody().getLocation().add(v).getBlock();
@@ -500,13 +502,6 @@ public class API{
         }
         return v;
     }
-
-
-
-    
-
-    
-
 
 
     private String blockPosition(Location l){
